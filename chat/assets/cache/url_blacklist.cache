@@ -1,0 +1,4 @@
+<?php 
+array_push($url_blacklist,
+"https://sampledomain.com/*"
+);

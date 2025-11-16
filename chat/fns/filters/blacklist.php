@@ -1,0 +1,15 @@
+<?php 
+array_push($badwords,
+"fuck",
+"ass",
+"dick",
+"piss",
+"asshole",
+"bastard",
+"bitch",
+"bollocks",
+"bugger",
+"bullshit",
+"crap",
+"wank"
+);

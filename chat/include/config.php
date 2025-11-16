@@ -32,10 +32,10 @@ if ($config->developer_mode) {
 $config->database = [
     'type' => 'mysql',
     // Global (remote) credentials
-    // host: 142.93.65.58
-    // database: jvapqabpzt
-    // username: jvapqabpzt
-    // password: SvE6354uyn
+    // host: 127.0.0.1
+    // database: xyxyxy_db
+    // username: xyxyxy_user
+    // password: xyxyxy_pass
     'host' => '127.0.0.1',
     'database' => 'onmilap_db',
     'username' => 'root',

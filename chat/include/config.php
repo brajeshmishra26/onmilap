@@ -31,10 +31,37 @@ if ($config->developer_mode) {
 
 $config->database = [
     'type' => 'mysql',
-    'host' => '142.93.65.58',
-    'database' => 'jvapqabpzt',
-    'username' => 'jvapqabpzt',
-    'password' => 'SvE6354uyn',
+    // Global (remote) credentials
+    // host: 142.93.65.58
+    // database: jvapqabpzt
+    // username: jvapqabpzt
+    // password: SvE6354uyn
+    'host' => '127.0.0.1',
+    'database' => 'onmilap_db',
+    'username' => 'root',
+    'password' => '',
+    'port' => '3306',
+    'prefix' => 'gr_',
+    'charset' => 'utf8mb4',
+    'collation' => 'utf8mb4_general_ci',
+    'logging' => false,
+    'error' => $db_error_mode,
+    'option' => [
+        PDO::ATTR_PERSISTENT => true
+    ],
+];
+
+// Local (XAMPP) credentials mirror the same structure for quick swapping.
+$config->local_database = [
+    'type' => 'mysql',
+    // host: 127.0.0.1
+    // database: jvapqabpzt (adjust if you use a different local DB name)
+    // username: root
+    // password: (empty by default in XAMPP)
+    'host' => '127.0.0.1',
+    'database' => 'onmilap_db',
+    'username' => 'root',
+    'password' => '',
     'port' => '3306',
     'prefix' => 'gr_',
     'charset' => 'utf8mb4',

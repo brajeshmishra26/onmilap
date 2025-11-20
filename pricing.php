@@ -1,3 +1,85 @@
+<?php
+if (!function_exists('pricing_base_url')) {
+function pricing_base_url(): string
+{
+    $scheme = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $dir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
+    if ($dir === '/' || $dir === '.') {
+        $dir = '';
+    }
+    $dir = trim($dir, '/');
+    return rtrim($scheme.'://'.$host.(!empty($dir) ? '/'.$dir : ''), '/').'/';
+}
+}
+
+$bootstrapPath = __DIR__.'/api/bootstrap.php';
+$pricingOriginalCwd = getcwd();
+$pricingChatDir = __DIR__.'/chat';
+
+if (is_file($bootstrapPath)) {
+    $pricingTemporarilyChangedCwd = false;
+
+    if (is_dir($pricingChatDir) && !defined('APP_BOOTSTRAPPED')) {
+        chdir($pricingChatDir);
+        $pricingTemporarilyChangedCwd = true;
+    }
+
+    require_once $bootstrapPath;
+
+    if ($pricingTemporarilyChangedCwd) {
+        chdir($pricingOriginalCwd);
+    }
+
+    if (
+        class_exists('Registry')
+        && method_exists('Registry', 'stored')
+        && Registry::stored('config')
+    ) {
+        $pricingConfig = Registry::load('config');
+        if (!isset($pricingConfig->current_page) || empty($pricingConfig->current_page)) {
+            $pricingScript = $_SERVER['SCRIPT_NAME'] ?? 'pricing.php';
+            $pricingConfig->current_page = trim(str_replace('.php', '', basename($pricingScript)));
+        }
+
+        $pricingConfig->site_url = pricing_base_url();
+    }
+}
+
+$isPricingUserLoggedIn = false;
+if (
+    class_exists('Registry')
+    && method_exists('Registry', 'load')
+    && method_exists('Registry', 'stored')
+    && Registry::stored('current_user')
+) {
+    $pricingCurrentUser = Registry::load('current_user');
+    if (isset($pricingCurrentUser->logged_in)) {
+        $isPricingUserLoggedIn = (bool)$pricingCurrentUser->logged_in;
+    }
+}
+
+$chatEntryUrl = pricing_base_url().'chat/entry';
+
+if (!function_exists('pricing_plan_href')) {
+    function pricing_plan_href(string $planName, bool $isLoggedIn, string $chatEntryUrl): string
+    {
+        $subscriptionUrl = 'subscription.php?plan='.urlencode($planName);
+        if ($isLoggedIn) {
+            return $subscriptionUrl;
+        }
+
+        return $chatEntryUrl.'?redirect='.urlencode($subscriptionUrl);
+    }
+}
+
+$pricingPlanLinks = [
+    'Free' => pricing_plan_href('Free', $isPricingUserLoggedIn, $chatEntryUrl),
+    'Starter' => pricing_plan_href('Starter', $isPricingUserLoggedIn, $chatEntryUrl),
+    'Professional' => pricing_plan_href('Professional', $isPricingUserLoggedIn, $chatEntryUrl),
+    'Creator' => pricing_plan_href('Creator', $isPricingUserLoggedIn, $chatEntryUrl),
+];
+?>
 <!DOCTYPE html>
 <html lang="zxx">
     <head>
@@ -37,16 +119,17 @@ include('assets/php/pages_nav.php');
             <div class="container">
                 <div class="section-title">
                     <h2>Choose The Pricing Plan</h2>
+                    <p>Click “Get Plan” to continue. You will be prompted to log in before the checkout opens inside the chat workspace.</p>
                 </div>
 
                 <div class="tab pricing-list-tab">
                     <ul class="tabs">
                         <li><a href="#">
-                            <i class="bx bxs-calendar-check"></i> Monthly
+                            <i class="bx bxs-calendar-check"></i> INR
                         </a></li>
                         
                         <li><a href="#">
-                            <i class="bx bxs-calendar-check"></i> Yearly
+                            <i class="bx bxs-calendar-check"></i> $-USD
                         </a></li>
                     </ul>
 
@@ -56,7 +139,7 @@ include('assets/php/pages_nav.php');
                                 <div class="col-lg-4 col-md-6 col-sm-6">
                                     <div class="single-pricing-table">
                                         <div class="pricing-header">
-                                            <h3>Free</h3>
+                                            <h3>Starter</h3>
                                         </div>
 
                                         <div class="price">
@@ -78,7 +161,7 @@ include('assets/php/pages_nav.php');
                                         </ul>
 
                                         <div class="btn-box">
-                                            <a href="https://onmilap.com/chat/entry" class="default-btn"><i class="bx bxs-hot"></i> Try It Free Now <span></span></a>
+                                            <a href="<?php echo htmlspecialchars($pricingPlanLinks['Starter'], ENT_QUOTES, 'UTF-8'); ?>" class="default-btn plan-cta" data-plan="Starter"><i class="bx bxs-hot"></i> Get Plan <span></span></a>
                                         </div>
                                     </div>
                                 </div>
@@ -86,7 +169,7 @@ include('assets/php/pages_nav.php');
                                 <div class="col-lg-4 col-md-6 col-sm-6">
                                     <div class="single-pricing-table">
                                         <div class="pricing-header">
-                                            <h3>Starter</h3>
+                                            <h3>Professional</h3>
                                         </div>
 
                                         <div class="price">
@@ -108,7 +191,7 @@ include('assets/php/pages_nav.php');
                                         </ul>
 
                                         <div class="btn-box">
-                                            <a href="https://onmilap.com/chat/entry" class="default-btn"><i class="bx bxs-hot"></i> Try It Free Now <span></span></a>
+                                            <a href="<?php echo htmlspecialchars($pricingPlanLinks['Professional'], ENT_QUOTES, 'UTF-8'); ?>" class="default-btn plan-cta" data-plan="Professional"><i class="bx bxs-hot"></i> Get Plan <span></span></a>
                                         </div>
                                     </div>
                                 </div>
@@ -116,7 +199,7 @@ include('assets/php/pages_nav.php');
                                 <div class="col-lg-4 col-md-6 col-sm-6 offset-lg-0 offset-md-3 offset-sm-3">
                                     <div class="single-pricing-table">
                                         <div class="pricing-header">
-                                            <h3>Professional</h3>
+                                            <h3>Creator</h3>
                                         </div>
 
                                         <div class="price">
@@ -138,7 +221,7 @@ include('assets/php/pages_nav.php');
                                         </ul>
 
                                         <div class="btn-box">
-                                            <a href="https://onmilap.com/chat/entry" class="default-btn"><i class="bx bxs-hot"></i> Try It Free Now <span></span></a>
+                                            <a href="<?php echo htmlspecialchars($pricingPlanLinks['Creator'], ENT_QUOTES, 'UTF-8'); ?>" class="default-btn plan-cta" data-plan="Creator"><i class="bx bxs-hot"></i> Get Plan <span></span></a>
                                         </div>
                                     </div>
                                 </div>
@@ -172,7 +255,7 @@ include('assets/php/pages_nav.php');
                                         </ul>
 
                                         <div class="btn-box">
-                                            <a href="https://onmilap.com/chat/entry" class="default-btn"><i class="bx bxs-hot"></i> Try It Free Now <span></span></a>
+                                            <a href="<?php echo htmlspecialchars($pricingPlanLinks['Free'], ENT_QUOTES, 'UTF-8'); ?>" class="default-btn plan-cta" data-plan="Free"><i class="bx bxs-hot"></i> Get Plan <span></span></a>
                                         </div>
                                     </div>
                                 </div>
@@ -202,7 +285,7 @@ include('assets/php/pages_nav.php');
                                         </ul>
 
                                         <div class="btn-box">
-                                            <a href="https://onmilap.com/chat/entry" class="default-btn"><i class="bx bxs-hot"></i> Try It Free Now <span></span></a>
+                                            <a href="<?php echo htmlspecialchars($pricingPlanLinks['Starter'], ENT_QUOTES, 'UTF-8'); ?>" class="default-btn plan-cta" data-plan="Starter"><i class="bx bxs-hot"></i> Get Plan <span></span></a>
                                         </div>
                                     </div>
                                 </div>
@@ -232,7 +315,7 @@ include('assets/php/pages_nav.php');
                                         </ul>
 
                                         <div class="btn-box">
-                                            <a href="https://onmilap.com/chat/entry" class="default-btn"><i class="bx bxs-hot"></i> Try It Free Now <span></span></a>
+                                            <a href="<?php echo htmlspecialchars($pricingPlanLinks['Professional'], ENT_QUOTES, 'UTF-8'); ?>" class="default-btn plan-cta" data-plan="Professional"><i class="bx bxs-hot"></i> Get Plan <span></span></a>
                                         </div>
                                     </div>
                                 </div>

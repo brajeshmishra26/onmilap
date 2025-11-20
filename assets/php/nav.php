@@ -45,6 +45,22 @@
                                 <li class="nav-item">
                                     <a href="pricing.php" class="nav-link">Pricing</a>
                                 </li>
+                                <li class="nav-item">
+                                    <a href="#" class="nav-link">
+                                        Plan <i class='bx bx-chevron-down'></i>
+                                    </a>
+                                    <ul class="dropdown-menu">
+                                        <li class="nav-item">
+                                            <a href="subscription.php" class="nav-link">Recharge</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a href="active-plan.php" class="nav-link">Active Plan</a>
+                                        </li>
+                                        <li class="nav-item">
+                                            <a href="subscription-history.php" class="nav-link">History</a>
+                                        </li>
+                                    </ul>
+                                </li>
 <li class="nav-item">
                                     <a href="faq.php" class="nav-link">FAQ</a>
                                 </li>

@@ -570,6 +570,30 @@
                         </div>
                     </li>
                     <?php
+                    $planStrings = Registry::load('strings');
+                    $rechargeLabel = isset($planStrings->recharge_now) ? $planStrings->recharge_now : 'Recharge';
+                    $activePlanLabel = isset($planStrings->active_plan) ? $planStrings->active_plan : 'Active Plan';
+                    $historyLabel = isset($planStrings->history) ? $planStrings->history : 'History';
+                    ?>
+                    <li class="has_child">
+                        <div class="menu_item">
+                            <span class="icon">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                    <path d="M4 5h16v2H4V5zm0 4h16v2H4V9zm0 4h10v2H4v-2zm0 4h8v2H4v-2z" fill="currentColor"/>
+                                    <path d="M15 13l3 3 4-6" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                </svg>
+                            </span>
+                            <span class="title">Plan</span>
+                        </div>
+                        <div class="child_menu">
+                            <ul>
+                                <li class="openlink" url="<?php echo Registry::load('config')->site_url; ?>subscription.php" newtab="true"><?php echo htmlspecialchars($rechargeLabel, ENT_QUOTES, 'UTF-8'); ?></li>
+                                <li class="openlink" url="<?php echo Registry::load('config')->site_url; ?>subscription.php?view=active" newtab="true"><?php echo htmlspecialchars($activePlanLabel, ENT_QUOTES, 'UTF-8'); ?></li>
+                                <li class="openlink" url="<?php echo Registry::load('config')->site_url; ?>subscription.php?view=history" newtab="true"><?php echo htmlspecialchars($historyLabel, ENT_QUOTES, 'UTF-8'); ?></li>
+                            </ul>
+                        </div>
+                    </li>
+                    <?php
                 }
             }
             ?>
@@ -813,6 +837,8 @@
             }
 
             if (!empty($settings_permissions)) {
+                $strings_store = Registry::load('strings');
+                $add_plan_label = (isset($strings_store->add_plan) && !empty($strings_store->add_plan)) ? $strings_store->add_plan : 'Add Plan';
                 ?>
                 <li class="has_child">
                     <div class="menu_item">
@@ -873,6 +899,10 @@
 
                                 <li class="load_aside" load="ai_chat_bots">
                                     <?php echo Registry::load('strings')->ai_chat_bots ?>
+                                </li>
+
+                                <li class="load_form" form="subscription_plans" enlarge="true">
+                                    <?php echo $add_plan_label; ?>
                                 </li>
 
                                 <li class="load_form" form="role_attributes" enlarge="true">

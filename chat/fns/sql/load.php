@@ -1,5 +1,5 @@
 <?php
-include 'fns/sql/Medoo.php';
+require_once __DIR__ . '/Medoo.php';
 use Medoo\Medoo;
 class DB {
     private static $instance = null;

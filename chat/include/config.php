@@ -37,7 +37,7 @@ $config->database = [
     // username: xyxyxy_user
     // password: xyxyxy_pass
     'host' => '127.0.0.1',
-    'database' => 'onmilap_db',
+    'database' => 'onmilap',
     'username' => 'root',
     'password' => '',
     'port' => '3306',
@@ -59,7 +59,7 @@ $config->local_database = [
     // username: root
     // password: (empty by default in XAMPP)
     'host' => '127.0.0.1',
-    'database' => 'onmilap_db',
+    'database' => 'onmilap',
     'username' => 'root',
     'password' => '',
     'port' => '3306',

@@ -8,6 +8,14 @@ if (!Registry::load('appearance')->display_chat_alone) {
 
 <div class="<?php echo $middle_column_class; ?>" column="second">
 
+    <?php if (!empty(Registry::load('config')->show_subscription_page)) { ?>
+        <?php include 'layouts/chat_page/subscription_container.php'; ?>
+    <?php } elseif (!empty(Registry::load('config')->show_active_plan_page)) { ?>
+        <?php include 'layouts/chat_page/active_plan_container.php'; ?>
+    <?php } elseif (!empty(Registry::load('config')->show_plan_history_page)) { ?>
+        <?php include 'layouts/chat_page/plan_history_container.php'; ?>
+    <?php } else { ?>
+
     <div class="video_preview d-none">
         <span class="icons">
             <span class="close_player">
@@ -270,5 +278,7 @@ if (!Registry::load('appearance')->display_chat_alone) {
         </div>
     </div>
 
+
+    <?php } ?>
 
 </div>

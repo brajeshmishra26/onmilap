@@ -131,6 +131,7 @@ if (!$isLoggedIn) {
 }
 
 Registry::load('appearance')->display_chat_alone = true;
+Registry::load('appearance')->body_class .= ' subscription_view';
 
 Registry::load('config')->show_subscription_page = false;
 Registry::load('config')->show_active_plan_page = false;

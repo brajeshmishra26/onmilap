@@ -2,7 +2,7 @@
 if (!Registry::load('appearance')->display_chat_alone) {
     $middle_column_class = "col-md-7 col-lg-9 middle page_column";
 } else {
-    $middle_column_class = "display_chat_alone col-md-12 middle page_column";
+    $middle_column_class = "display_chat_alone col-md-12 middle page_column visible";
 }
 ?>
 

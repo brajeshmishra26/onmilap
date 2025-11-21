@@ -3,6 +3,14 @@ if (!defined('ONMILAP_SUBSCRIPTION_STYLES')) {
     define('ONMILAP_SUBSCRIPTION_STYLES', true);
     ?>
     <style>
+        body.subscription_view {
+            overflow-y: auto !important;
+            overflow-x: hidden;
+        }
+        body.subscription_view .main,
+        body.subscription_view .main .middle {
+            min-height: 100vh;
+        }
         .subscription-page {
             padding: 32px;
             max-width: 1200px;
@@ -273,6 +281,9 @@ if (!defined('ONMILAP_SUBSCRIPTION_STYLES')) {
             .history-table {
                 display: block;
                 overflow-x: auto;
+            }
+            body.subscription_view .main .page_column {
+                display: flex !important;
             }
         }
     </style>

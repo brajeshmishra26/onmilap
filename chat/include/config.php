@@ -6,6 +6,7 @@ $config->app_name = 'Grupo Chat';
 $config->app_version = '3.12';
 
 $config->site_url = "http://localhost/grupo/";
+$config->public_site_url = "https://onmilap.com/"; // Used for outward-facing links (emails/landing pages)
 $config->force_url = false;
 $config->force_https = false;
 $config->developer_mode = false;

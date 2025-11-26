@@ -12,6 +12,7 @@ var mic_mute_on_load = false;
 let psh_tkLastTapTime = 0;
 let psh_tkToggleState = false;
 var mute_users_during_call = false;
+var lk_callStartAt = null;
 
 var videochat_GridContainer = $('#video-chat-grid');
 var video_chat_formData = new FormData();
@@ -261,7 +262,20 @@ function leaveChannel() {
     videochat_GridContainer.innerHTML = '';
     $('.video_chat_container > .video_chat_full_view').html('');
 
+    var sessionSeconds = null;
+    if (lk_callStartAt) {
+        sessionSeconds = Math.round((Date.now() - lk_callStartAt) / 1000);
+    }
+    lk_callStartAt = null;
+
     isVideoChatActive = false;
+
+    if (window.SubscriptionUsageTracker && typeof SubscriptionUsageTracker.stopAndReport === 'function') {
+        SubscriptionUsageTracker.stopAndReport({
+            provider: 'livekit',
+            session_seconds: sessionSeconds
+        });
+    }
 }
 
 async function checkWebcamAndPermission() {
@@ -597,6 +611,13 @@ async function create_video_chat() {
         console.log(`Connected to Room: ${roomName}`);
 
         isVideoChatActive = true;
+        lk_callStartAt = Date.now();
+        if (window.SubscriptionUsageTracker && typeof SubscriptionUsageTracker.start === 'function') {
+            SubscriptionUsageTracker.start({
+                provider: 'livekit',
+                media: audio_only_chat ? 'audio' : 'video'
+            });
+        }
 
         update_video_chat_status();
 

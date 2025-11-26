@@ -838,7 +838,9 @@
 
             if (!empty($settings_permissions)) {
                 $strings_store = Registry::load('strings');
-                $add_plan_label = (isset($strings_store->add_plan) && !empty($strings_store->add_plan)) ? $strings_store->add_plan : 'Add Plan';
+                $subscription_plans_label = (isset($strings_store->subscription_plans) && !empty($strings_store->subscription_plans))
+                    ? $strings_store->subscription_plans
+                    : 'Subscription Plans';
                 ?>
                 <li class="has_child">
                     <div class="menu_item">
@@ -901,8 +903,8 @@
                                     <?php echo Registry::load('strings')->ai_chat_bots ?>
                                 </li>
 
-                                <li class="load_form" form="subscription_plans" enlarge="true">
-                                    <?php echo $add_plan_label; ?>
+                                <li class="load_aside" load="subscription_plans">
+                                    <?php echo $subscription_plans_label; ?>
                                 </li>
 
                                 <li class="load_form" form="role_attributes" enlarge="true">

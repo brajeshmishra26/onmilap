@@ -1,6 +1,6 @@
 <?php
 
-require_once dirname(__DIR__, 3) . '/includes/subscription/helpers.php';
+require_once dirname(__DIR__, 3).'/includes/subscription/helpers.php';
 
 $result = array();
 $result['success'] = false;
@@ -8,17 +8,36 @@ $result['error_message'] = Registry::load('strings')->went_wrong;
 $result['error_key'] = 'something_went_wrong';
 
 if (role(['permissions' => ['super_privileges' => 'core_settings']])) {
-
     $result['error_message'] = Registry::load('strings')->invalid_value;
     $result['error_key'] = 'invalid_value';
     $result['error_variables'] = [];
+
     $noerror = true;
+    $plan_id = 0;
+
+    if (isset($data['plan_id'])) {
+        $plan_id = filter_var($data['plan_id'], FILTER_SANITIZE_NUMBER_INT);
+    }
+
+    if (empty($plan_id)) {
+        $noerror = false;
+    }
 
     $required_fields = ['plan_name', 'plan_slug', 'price_inr', 'price_usd', 'total_minutes', 'daily_minutes_limit', 'validity_days'];
 
     foreach ($required_fields as $field) {
         if (!isset($data[$field]) || trim((string)$data[$field]) === '') {
             $result['error_variables'][] = [$field];
+            $noerror = false;
+        }
+    }
+
+    $planTable = subscription_medoo_table('plans');
+    $existingPlan = null;
+
+    if ($noerror) {
+        $existingPlan = DB::connect()->get($planTable, ['id'], ['id' => $plan_id]);
+        if (!$existingPlan) {
             $noerror = false;
         }
     }
@@ -30,12 +49,10 @@ if (role(['permissions' => ['super_privileges' => 'core_settings']])) {
         $plan_slug = preg_replace('/-+/', '-', $plan_slug);
         $plan_slug = trim($plan_slug, '-');
 
-        $planTable = subscription_medoo_table('plans');
-
         if (empty($plan_slug)) {
             $result['error_variables'][] = ['plan_slug'];
             $noerror = false;
-        } else if (DB::connect()->has($planTable, ['slug' => $plan_slug])) {
+        } else if (DB::connect()->has($planTable, ['slug' => $plan_slug, 'id[!]' => $plan_id])) {
             $result['error_message'] = Registry::load('strings')->duplicate_entry_detected;
             $result['error_key'] = 'duplicate_entry';
             $result['error_variables'][] = ['plan_slug'];
@@ -78,11 +95,9 @@ if (role(['permissions' => ['super_privileges' => 'core_settings']])) {
         $is_top_up = (isset($data['is_top_up']) && $data['is_top_up'] === 'yes') ? 1 : 0;
         $is_active = (isset($data['is_active']) && $data['is_active'] === 'no') ? 0 : 1;
 
-        $planTable = subscription_medoo_table('plans');
-
-        DB::connect()->insert($planTable, [
-            'slug' => $plan_slug,
+        DB::connect()->update($planTable, [
             'name' => $plan_name,
+            'slug' => $plan_slug,
             'price_usd' => $price_usd,
             'price_inr' => $price_inr,
             'total_minutes' => (int)$total_minutes,
@@ -91,7 +106,7 @@ if (role(['permissions' => ['super_privileges' => 'core_settings']])) {
             'extends_validity_days' => (int)$extends_validity_days,
             'is_top_up' => $is_top_up,
             'is_active' => $is_active,
-        ]);
+        ], ['id' => $plan_id]);
 
         if (!DB::connect()->error) {
             $result = array();

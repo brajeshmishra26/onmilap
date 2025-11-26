@@ -11,6 +11,8 @@ use Registry;
 
 class SubscriptionService
 {
+    private const TRIAL_PLAN_SLUG = 'test';
+
     public function __construct(
         private Medoo $db,
         private PlanModel $planModel,
@@ -19,9 +21,21 @@ class SubscriptionService
     ) {
     }
 
-    public function listPlans(): array
+    public function listPlans(?int $userId = null): array
     {
-        return $this->planModel->allActive();
+        $plans = $this->planModel->allActive();
+
+        if ($userId === null || $userId <= 0 || empty($plans)) {
+            return $plans;
+        }
+
+        if (!$this->subscriptionModel->userHasAnySubscription($userId)) {
+            return $plans;
+        }
+
+        return array_values(array_filter($plans, function (array $plan): bool {
+            return !$this->isTrialPlan($plan);
+        }));
     }
 
     public function getPlanBySlug(string $slug): ?array
@@ -63,6 +77,10 @@ class SubscriptionService
             throw new Exception('Selected plan is unavailable.');
         }
 
+        if ($this->isTrialPlan($plan) && $this->subscriptionModel->userHasAnySubscription($userId)) {
+            throw new Exception('Trial plan is available only for new users.');
+        }
+
         $currency = strtoupper($currency);
         $gateway = $currency === 'INR' ? 'razorpay' : 'paypal';
 
@@ -100,16 +118,27 @@ class SubscriptionService
 
     public function deductMinutesOnSessionEnd(int $userId, float $sessionMinutes, array $metadata = []): array
     {
-        $minutes = (int) round($sessionMinutes);
-        if ($minutes <= 0) {
+        if ($sessionMinutes <= 0) {
             throw new Exception('Invalid session length.');
         }
+
+        // Round up to make sure sub-minute sessions still deduct at least one minute
+        $minutes = (int) ceil($sessionMinutes);
 
         $pdo = $this->db->pdo;
         $pdo->beginTransaction();
 
         try {
             $subscription = $this->subscriptionModel->findActiveForUser($userId, true);
+            if ($subscription && !empty($subscription['end_at'])) {
+                $endAt = new DateTimeImmutable($subscription['end_at'], new DateTimeZone('UTC'));
+                $nowUtc = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+                if ($endAt < $nowUtc) {
+                    $this->subscriptionModel->update((int) $subscription['id'], ['status' => 'expired']);
+                    $subscription = null;
+                }
+            }
+
             if (!$subscription) {
                 throw new Exception('No active subscription found.');
             }
@@ -170,6 +199,15 @@ class SubscriptionService
         $subscription = $this->subscriptionModel->findActiveWithPlan($userId);
         if (!$subscription) {
             return null;
+        }
+
+        $nowUtc = new DateTimeImmutable('now', new DateTimeZone('UTC'));
+        if (!empty($subscription['end_at'])) {
+            $endAtCandidate = new DateTimeImmutable($subscription['end_at'], new DateTimeZone('UTC'));
+            if ($endAtCandidate < $nowUtc) {
+                $this->subscriptionModel->update((int) $subscription['id'], ['status' => 'expired']);
+                return null;
+            }
         }
 
         $timezone = $this->resolveUserTimezone($userId);
@@ -320,7 +358,7 @@ class SubscriptionService
 
     private function queueSessionSummaryEmail(array $subscription, int $dailyRemaining, int $totalRemaining): void
     {
-        $user = $this->db->get('site_users', ['email', 'display_name'], ['user_id' => $subscription['user_id']]);
+        $user = $this->db->get('site_users', ['email_address(email)', 'display_name'], ['user_id' => $subscription['user_id']]);
         if (!$user || empty($user['email'])) {
             return;
         }
@@ -361,7 +399,7 @@ class SubscriptionService
         ?string $paymentReference,
         ?array $subscriptionDetails
     ): void {
-        $user = $this->db->get('site_users', ['email', 'display_name', 'time_zone'], ['user_id' => $userId]);
+        $user = $this->db->get('site_users', ['email_address(email)', 'display_name', 'time_zone'], ['user_id' => $userId]);
         if (!$user || empty($user['email'])) {
             return;
         }
@@ -454,7 +492,14 @@ class SubscriptionService
 
     private function getPublicSiteUrl(): string
     {
-        $siteUrl = Registry::load('config')->site_url ?? '';
+        $config = Registry::load('config');
+        $preferred = isset($config->public_site_url) ? trim((string) $config->public_site_url) : '';
+
+        if ($preferred !== '') {
+            return rtrim($preferred, '/') . '/';
+        }
+
+        $siteUrl = $config->site_url ?? '';
         $siteUrl = trim((string) $siteUrl);
         if ($siteUrl === '') {
             return '';
@@ -480,5 +525,14 @@ class SubscriptionService
         ob_start();
         include $viewFile;
         return trim((string) ob_get_clean());
+    }
+
+    private function isTrialPlan(array $plan): bool
+    {
+        if (!array_key_exists('slug', $plan)) {
+            return false;
+        }
+
+        return strtolower((string) $plan['slug']) === self::TRIAL_PLAN_SLUG;
     }
 }

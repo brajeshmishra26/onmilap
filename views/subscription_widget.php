@@ -1,7 +1,7 @@
 <?php
 require_once __DIR__ . '/../api/bootstrap.php';
-$plans = subscription_service()->listPlans();
-$currentUserId = Registry::load('current_user')->id ?? 0;
+$currentUserId = (int) (Registry::load('current_user')->id ?? 0);
+$plans = subscription_service()->listPlans($currentUserId);
 $chatBaseUrl = rtrim(Registry::load('config')->site_url ?? '', '/');
 $publicBaseUrl = preg_replace('#/chat/?$#', '', $chatBaseUrl);
 if ($publicBaseUrl === '') {

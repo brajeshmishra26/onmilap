@@ -117,4 +117,9 @@ class SubscriptionModel
             ]);
         }
     }
+
+    public function userHasAnySubscription(int $userId): bool
+    {
+        return $this->db->has($this->subscriptionsTable, ['user_id' => $userId]);
+    }
 }

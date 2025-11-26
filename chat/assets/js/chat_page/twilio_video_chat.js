@@ -4,6 +4,7 @@ video_chat_available = true;
 var localTracks = [];
 var localParticipantContainer;
 var audio_only_chat = false;
+var tw_callStartAt = null;
 
 
 var videochat_GridContainer = $('#video-chat-grid');
@@ -169,7 +170,20 @@ function leaveChannel() {
 
     videochat_GridContainer.innerHTML = '';
 
+    var sessionSeconds = null;
+    if (tw_callStartAt) {
+        sessionSeconds = Math.round((Date.now() - tw_callStartAt) / 1000);
+    }
+    tw_callStartAt = null;
+
     isVideoChatActive = false;
+
+    if (window.SubscriptionUsageTracker && typeof SubscriptionUsageTracker.stopAndReport === 'function') {
+        SubscriptionUsageTracker.stopAndReport({
+            provider: 'twilio',
+            session_seconds: sessionSeconds
+        });
+    }
 }
 
 async function checkWebcamAndPermission() {
@@ -281,6 +295,13 @@ async function create_video_chat() {
             update_video_chat_status();
 
             isVideoChatActive = true;
+            tw_callStartAt = Date.now();
+            if (window.SubscriptionUsageTracker && typeof SubscriptionUsageTracker.start === 'function') {
+                SubscriptionUsageTracker.start({
+                    provider: 'twilio',
+                    media: audio_only_chat ? 'audio' : 'video'
+                });
+            }
 
             if (call_notification_timeout_id) {
                 clearTimeout(call_notification_timeout_id);

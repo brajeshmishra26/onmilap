@@ -8,6 +8,7 @@ var phoneInput = null;
 var user_login_session_id = WebStorage('get', 'login_session_id');
 var user_access_code = WebStorage('get', 'access_code');
 var user_session_time_stamp = WebStorage('get', 'session_time_stamp');
+var hashTabPattern = /^(login|signup|guest_login|forgot_password)$/;
 
 function isJSON (data) {
     var IS_JSON = true;
@@ -69,7 +70,11 @@ $(document).ready(function() {
     $('body').on('contextmenu', 'img', function(e) {
         return false;
     });
+
+    handleEntryHash();
 });
+
+$(window).on('hashchange', handleEntryHash);
 
 $.fn.replace_text = function(text) {
     text = decode_specialchars(text);
@@ -104,6 +109,14 @@ function switch_form(form) {
 
     if (form !== 'forgot_password' && form !== 'phone_verification') {
         $('.entry_box .tabs').removeClass('d-none');
+    }
+}
+
+function handleEntryHash() {
+    var hash = (window.location.hash || '').replace('#', '').trim();
+
+    if (hashTabPattern.test(hash)) {
+        switch_form(hash);
     }
 }
 

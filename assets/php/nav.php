@@ -152,8 +152,8 @@
                             </ul>
 
                             <div class="others-options">
-                                <a href="https://onmilap.com/chat/entry" class="default-btn">
-                                    <i class="bx bxs-hot"></i>Try It Free Now<span></span>
+                                <a href="https://onmilap.com/chat/entry#signup" class="default-btn">
+                                    <i class="bx bxs-hot"></i>New Login<span></span>
                                 </a>
                                 <a href="https://onmilap.com/chat/entry" class="optional-btn">
                                     <i class="bx bx-log-in"></i>Log In<span></span>
@@ -177,8 +177,8 @@
                     <div class="container">
                         <div class="option-inner">
                             <div class="others-options">
-                                <a href="https://onmilap.com/chat/entry" class="default-btn">
-                                    <i class="bx bxs-hot"></i>Get Started<span></span>
+                                <a href="https://onmilap.com/chat/entry#signup" class="default-btn">
+                                    <i class="bx bxs-hot"></i>New Login<span></span>
                                 </a>
                                 <a href="https://onmilap.com/chat/entry" class="optional-btn">
                                     <i class="bx bx-log-in"></i>Log In<span></span>

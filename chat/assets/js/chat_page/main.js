@@ -22,6 +22,308 @@ var sw_registerations = [];
 var viewerjs;
 var current_logged_user_id;
 
+// Simple session reporter used to sync call minutes with subscription API
+window.SubscriptionUsageTracker = (function() {
+    var sessionStartedAt = null;
+    var sessionMeta = {};
+    var cachedSiteRoot = null;
+
+    function hasActiveSubscription() {
+        var status = (system_variable('active_subscription_status') || '').toLowerCase();
+        return status === 'active';
+    }
+
+    function markSubscriptionInactive(newStatus) {
+        if (typeof newStatus === 'string' && newStatus.length > 0) {
+            system_variable('active_subscription_status', newStatus.toLowerCase());
+        } else {
+            system_variable('active_subscription_status', 'inactive');
+        }
+    }
+
+    function detectDeviceType() {
+        var userAgent = navigator.userAgent || '';
+        if (/android|iphone|ipad|mobile/i.test(userAgent)) {
+            return 'mobile';
+        }
+        return 'web';
+    }
+
+    function resolveUserId() {
+        if (current_logged_user_id) {
+            var parsed = parseInt(current_logged_user_id, 10);
+            if (!Number.isNaN(parsed)) {
+                return parsed;
+            }
+        }
+
+        if ($('.logged_in_user_id').length > 0) {
+            var fallback = parseInt($('.logged_in_user_id').text(), 10);
+            if (!Number.isNaN(fallback)) {
+                current_logged_user_id = fallback;
+                return fallback;
+            }
+        }
+
+        return null;
+    }
+
+    function deriveSessionIdentifier(meta) {
+        if (meta && meta.session_id) {
+            return meta.session_id;
+        }
+
+        if (current_video_chat_id !== null && current_video_chat_id !== undefined) {
+            if (current_video_chat_type === 'group') {
+                return 'group:' + current_video_chat_id;
+            }
+            if (current_video_chat_type === 'private_chat') {
+                return 'user:' + current_video_chat_id;
+            }
+        }
+
+        if ($('.main .chatbox').attr('group_id') !== undefined) {
+            return 'group:' + $('.main .chatbox').attr('group_id');
+        }
+
+        if ($('.main .chatbox').attr('user_id') !== undefined) {
+            return 'user:' + $('.main .chatbox').attr('user_id');
+        }
+
+        return null;
+    }
+
+    function resolveSiteRoot() {
+        if (cachedSiteRoot) {
+            return cachedSiteRoot;
+        }
+
+        try {
+            var base = new URL(baseurl, window.location.origin);
+            var segments = base.pathname.split('/').filter(function(segment) {
+                return segment.length > 0;
+            });
+
+            if (segments.length > 0 && segments[segments.length - 1].toLowerCase() === 'chat') {
+                segments.pop();
+            }
+
+            var rootPath = segments.length ? '/' + segments.join('/') + '/' : '/';
+            cachedSiteRoot = base.origin + rootPath;
+        } catch (error) {
+            cachedSiteRoot = baseurl;
+        }
+
+        return cachedSiteRoot;
+    }
+
+    function buildApiUrl(path) {
+        var root = resolveSiteRoot();
+        var normalized = path.charAt(0) === '/' ? path.substring(1) : path;
+
+        if (root.slice(-1) !== '/') {
+            root += '/';
+        }
+
+        return root + normalized;
+    }
+
+    function sendUsage(seconds, meta) {
+        if (!hasActiveSubscription()) {
+            console.info('SubscriptionUsageTracker: skipping usage report because no active subscription is active.');
+            return;
+        }
+
+        var userId = resolveUserId();
+        if (!userId) {
+            console.warn('SubscriptionUsageTracker: missing user_id, skipping usage report.', {
+                seconds: seconds,
+                meta: meta
+            });
+            return;
+        }
+
+        if (seconds < 1) {
+            console.warn('SubscriptionUsageTracker: session shorter than a second, skipping.', meta);
+            return;
+        }
+
+        var payload = {
+            user_id: userId,
+            session_seconds: seconds
+        };
+
+        var sessionId = deriveSessionIdentifier(meta);
+        if (sessionId) {
+            payload.session_id = sessionId;
+        }
+
+        var device = meta && meta.device ? meta.device : detectDeviceType();
+        if (device) {
+            payload.device = device;
+        }
+
+        var apiEndpoint = buildApiUrl('api/sessions/end.php');
+
+        fetch(apiEndpoint, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(payload)
+        }).then(function(response) {
+            var status = response.status;
+            return response.text().then(function(text) {
+                var parsed = null;
+                if (text) {
+                    try {
+                        parsed = JSON.parse(text);
+                    } catch (parseError) {
+                        console.warn('SubscriptionUsageTracker: failed to parse API response JSON.', {
+                            error: parseError,
+                            text: text
+                        });
+                    }
+                }
+
+                return {
+                    status: status,
+                    data: parsed,
+                    raw: text
+                };
+            });
+        }).then(function(result) {
+            var isError = result.status >= 400 || !result.data || result.data.ok === false;
+            if (isError) {
+                console.warn('SubscriptionUsageTracker: session usage API rejected request.', {
+                    status: result.status,
+                    response: result.data,
+                    payload: payload
+                });
+
+                if (result.status === 422 || result.status === 409) {
+                    var message = (result.data && result.data.error) ? result.data.error.toLowerCase() : '';
+                    if (message.indexOf('no active subscription') !== -1 || message.indexOf('expired') !== -1) {
+                        markSubscriptionInactive('expired');
+                    }
+                }
+            } else {
+                console.info('SubscriptionUsageTracker: session usage recorded.', result.data);
+            }
+        }).catch(function(error) {
+            console.error('SubscriptionUsageTracker: session usage API request failed.', {
+                error: error,
+                payload: payload
+            });
+        });
+    }
+
+    function start(meta) {
+        if (!hasActiveSubscription()) {
+            console.info('SubscriptionUsageTracker: not starting (no active subscription).');
+            sessionStartedAt = null;
+            sessionMeta = {};
+            return;
+        }
+
+        sessionStartedAt = Date.now();
+        sessionMeta = meta || {};
+    }
+
+    function stopAndReport(meta) {
+        if (!hasActiveSubscription()) {
+            console.info('SubscriptionUsageTracker: stop ignored (no active subscription).');
+            sessionStartedAt = null;
+            sessionMeta = {};
+            return;
+        }
+
+        var mergedMeta = Object.assign({}, sessionMeta, meta || {});
+        var seconds = null;
+
+        if (mergedMeta.session_seconds !== undefined) {
+            seconds = mergedMeta.session_seconds;
+            delete mergedMeta.session_seconds;
+        }
+
+        if (seconds === null && sessionStartedAt) {
+            seconds = Math.round((Date.now() - sessionStartedAt) / 1000);
+        }
+
+        sessionStartedAt = null;
+        sessionMeta = {};
+
+        if (!seconds || seconds < 1) {
+            return;
+        }
+
+        sendUsage(seconds, mergedMeta);
+    }
+
+    function reportSeconds(seconds, meta) {
+        sendUsage(seconds, meta || {});
+    }
+
+    return {
+        start: start,
+        stopAndReport: stopAndReport,
+        reportSeconds: reportSeconds
+    };
+})();
+
+window.SubscriptionAccess = (function() {
+    var DEFAULT_MINUTES = 30;
+    var warningMessage = 'Your balance is low. Please recharge to continue.';
+
+    function getStatus() {
+        return (system_variable('active_subscription_status') || '').toLowerCase();
+    }
+
+    function getRemainingMinutes() {
+        var minutes = parseInt(system_variable('active_subscription_minutes'), 10);
+        if (Number.isNaN(minutes)) {
+            return 0;
+        }
+        return minutes;
+    }
+
+    function getRechargeUrl() {
+        var url = system_variable('subscription_recharge_url');
+        if (url && url.length > 0) {
+            return url;
+        }
+        return baseurl ? baseurl + 'subscription.php' : 'subscription.php';
+    }
+
+    function notifyAndRedirect(message) {
+        var finalMessage = message || warningMessage;
+        if (window.alert) {
+            alert(finalMessage);
+        }
+        var redirectUrl = getRechargeUrl();
+        setTimeout(function() {
+            window.location.href = redirectUrl;
+        }, 100);
+    }
+
+    function requireMinutes(requiredMinutes) {
+        var needed = typeof requiredMinutes === 'number' ? requiredMinutes : DEFAULT_MINUTES;
+        var status = getStatus();
+        var remaining = getRemainingMinutes();
+
+        if (status === 'active' && remaining >= needed) {
+            return true;
+        }
+
+        notifyAndRedirect(warningMessage);
+        return false;
+    }
+
+    return {
+        requireMinutes: requireMinutes
+    };
+})();
+
 
 $(document).ready(function() {
     if (user_login_session_id !== null && user_access_code !== null && user_session_time_stamp !== null) {
@@ -40,6 +342,14 @@ $(document).ready(function() {
 
     if ($('.logged_in_user_id').length > 0) {
         current_logged_user_id = $('.logged_in_user_id').text();
+    }
+});
+
+$(document).on('click', '.main .chatbox .join_video_call', function(event) {
+    if (window.SubscriptionAccess && !SubscriptionAccess.requireMinutes(30)) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        return false;
     }
 });
 

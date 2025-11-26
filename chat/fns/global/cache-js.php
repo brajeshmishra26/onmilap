@@ -1,5 +1,6 @@
 <?php
 
+require_once __DIR__ . '/load.php';
 require_once 'fns/minify/load.php';
 use MatthiasMullie\Minify;
 

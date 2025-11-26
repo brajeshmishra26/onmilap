@@ -935,6 +935,12 @@ async function joinChannel() {
         if (!vc_callStartAt) {
             vc_callStartAt = Date.now();
             vc_startTimerIfNeeded();
+            if (window.SubscriptionUsageTracker && typeof SubscriptionUsageTracker.start === 'function') {
+                SubscriptionUsageTracker.start({
+                    provider: 'agora',
+                    media: audio_only_chat ? 'audio' : 'video'
+                });
+            }
         }
         console.log("publish success");
         update_video_chat_status();
@@ -968,8 +974,19 @@ async function leaveChannel() {
     $('.video_chat_container > .video_chat_full_view').html('');
 
     isVideoChatActive = false;
+    var sessionSeconds = null;
+    if (vc_callStartAt) {
+        sessionSeconds = Math.round((Date.now() - vc_callStartAt) / 1000);
+    }
     // Stop and reset call timer
     vc_stopTimer();
+
+    if (window.SubscriptionUsageTracker && typeof SubscriptionUsageTracker.stopAndReport === 'function') {
+        SubscriptionUsageTracker.stopAndReport({
+            provider: 'agora',
+            session_seconds: sessionSeconds
+        });
+    }
 
     console.log("client leaves channel success");
 }

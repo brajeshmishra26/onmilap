@@ -1,3 +1,40 @@
+<?php
+$activeSubscriptionStatus = 'inactive';
+$activeSubscriptionMinutes = 0;
+$activeSubscriptionEndAt = '';
+
+$chatBaseUrl = rtrim(Registry::load('config')->site_url ?? '', '/');
+$publicBaseUrl = preg_replace('#/chat/?$#i', '', $chatBaseUrl);
+if ($publicBaseUrl === '') {
+    $publicBaseUrl = $chatBaseUrl;
+}
+if ($publicBaseUrl !== '' && substr($publicBaseUrl, -1) !== '/') {
+    $publicBaseUrl .= '/';
+}
+$subscriptionPageUrl = $publicBaseUrl.'subscription.php';
+
+if (Registry::load('current_user')->logged_in) {
+    $currentUserId = (int) (Registry::load('current_user')->id ?? 0);
+    if ($currentUserId > 0) {
+        $subscriptionBootstrap = dirname(__DIR__, 3) . '/includes/subscription/bootstrap.php';
+        if (is_file($subscriptionBootstrap)) {
+            require_once $subscriptionBootstrap;
+            try {
+                $subscriptionService = subscription_service();
+                $activeSubscription = $subscriptionService->getActiveSubscriptionDetails($currentUserId);
+                if ($activeSubscription) {
+                    $activeSubscriptionStatus = strtolower((string) ($activeSubscription['status'] ?? 'active'));
+                    $activeSubscriptionMinutes = (int) ($activeSubscription['total_remaining_minutes'] ?? 0);
+                    $activeSubscriptionEndAt = (string) ($activeSubscription['end_at_utc'] ?? '');
+                }
+            } catch (\Throwable $exception) {
+                // Fail silently; subscription context is optional for the chat shell.
+            }
+        }
+    }
+}
+?>
+
 <body class='<?php echo(Registry::load('appearance')->body_class) ?> overflow-hidden'>
 
     <?php include 'assets/headers_footers/chat_page/body.php'; ?>
@@ -215,6 +252,10 @@
         <span class="variable_confirm_camera_use"><?php echo(Registry::load('settings')->confirm_camera_use) ?></span>
         <span class="variable_view_before_joining_group_vc"><?php echo(Registry::load('settings')->view_before_joining_group_vc) ?></span>
         <span class="variable_js_file_cache_timestamp"><?php echo $js_file_cache_timestamp ?></span>
+        <span class="variable_active_subscription_status"><?php echo htmlspecialchars($activeSubscriptionStatus, ENT_QUOTES, 'UTF-8'); ?></span>
+        <span class="variable_active_subscription_minutes"><?php echo (int)$activeSubscriptionMinutes; ?></span>
+        <span class="variable_active_subscription_end_at"><?php echo htmlspecialchars($activeSubscriptionEndAt, ENT_QUOTES, 'UTF-8'); ?></span>
+        <span class="variable_subscription_recharge_url"><?php echo htmlspecialchars($subscriptionPageUrl, ENT_QUOTES, 'UTF-8'); ?></span>
 
         <?php
         if (Registry::load('settings')->realtime_mode === 'websocket') {

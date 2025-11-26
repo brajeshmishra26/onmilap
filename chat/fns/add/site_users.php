@@ -24,6 +24,7 @@ $send_welcome_email = false;
 $notify_admins_pending_approval = false;
 $currentMonthYear = date('mY');
 $update_image_data = array();
+$base_username_input = null;
 
 if (!$force_request) {
     $required_fields[] = 'confirm_password';
@@ -137,6 +138,7 @@ if ($create_user) {
 
     if (isset($data['username'])) {
         $data['username'] = sanitize_username($data['username'], $strict_mode);
+        $base_username_input = $data['username'];
     }
 
     if (isset($data['username'])) {
@@ -375,6 +377,31 @@ if ($create_user) {
 
             if (isset(Registry::load('settings')->captcha) && Registry::load('settings')->captcha !== 'disable') {
                 include 'fns/add/sfn_captcha_verification.php';
+            }
+        }
+    }
+
+    if ($noerror && !empty($base_username_input)) {
+        $lastUserId = DB::connect()->max('site_users', 'user_id');
+        if (!is_numeric($lastUserId)) {
+            $lastUserId = 0;
+        }
+        $nextUserId = (int)$lastUserId + 1;
+        if ($nextUserId < 1) {
+            $nextUserId = 1;
+        }
+
+        $generated_username = $base_username_input . '.' . $nextUserId;
+        $data['username'] = $generated_username;
+
+        if (!empty(Registry::load('settings')->maximum_username_length)) {
+            $maxLength = (int)Registry::load('settings')->maximum_username_length;
+            if (mb_strlen($data['username']) > $maxLength) {
+                $result['error_message'] = Registry::load('strings')->exceeds_username_length;
+                $result['error_message'] .= ' [' . $maxLength . ']';
+                $result['error_key'] = 'exceeds_username_length';
+                $result['error_variables'][] = 'username';
+                $noerror = false;
             }
         }
     }

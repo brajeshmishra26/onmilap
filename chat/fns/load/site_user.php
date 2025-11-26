@@ -98,7 +98,7 @@ if (isset($user[0])) {
 
     $output['loaded'] = new stdClass();
     $output['loaded']->heading = $user['display_name'];
-    $output['loaded']->subheading = '@'.$user['username'];
+    $output['loaded']->subheading = $user['username'];
     $output['loaded']->cover_pic = get_img_url(['from' => 'site_users/cover_pics', 'image' => $user['profile_cover_pic']]);
     $output['loaded']->image = get_img_url(['from' => 'site_users/profile_pics', 'image' => $user['profile_picture']]);
 

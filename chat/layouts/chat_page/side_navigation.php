@@ -1185,7 +1185,7 @@
             </span>
             <span class="center">
                 <span class="title logged_in_user_name"><?php echo Registry::load('current_user')->name; ?></span>
-                <span class="sub_title">@<?php echo Registry::load('current_user')->username; ?></span>
+                <span class="sub_title"><?php echo Registry::load('current_user')->username; ?></span>
                 <span class="logged_in_user_name_color d-none"><?php echo role(['find' => 'name_color']); ?></span>
                 <span class="logged_in_user_id d-none"><?php echo Registry::load('current_user')->id; ?></span>
             </span>
